@@ -1,7 +1,7 @@
-local HttpService = game:GetService("HttpService")
 --[[
 	zTable is a luau table wrapper written by @Blueshell_Dev
 ]]--
+local HttpService = game:GetService("HttpService")
 
 local function deepCopy(original)
 	local copy = {}
