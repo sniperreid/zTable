@@ -67,6 +67,9 @@ function zTable.new(ref): zTableMalleable
 	formedTable.ClassName = "zTable"
 	formedTable.ref = zTable.transformReference(ref)
 	formedTable.length = #formedTable:raw()
+	
+	formedTable:setPayloadType("Out")
+	formedTable:enforcePayloadLength()
 
 	return formedTable
 end
@@ -127,11 +130,11 @@ function zTable:Insert(Value: any?): zTableMalleable
 		Value = zTable.new(Value)
 	end
 
-	if typeof(Value) == "table" and Value.ref then
-		self.Inserting:Fire(#self.ref + 1, Value.ref)
-	else
+	--if typeof(Value) == "table" and Value.ref then
+	--	self.Inserting:Fire(#self.ref + 1, Value.ref)
+	--else
 		self.Inserting:Fire(#self.ref + 1, Value)
-	end
+	--end
 	
 	self.length += 1
 
@@ -194,11 +197,11 @@ function zTable:Pop(position: number?)
 	if not object then return end
 
 	-- is a zTable
-	if typeof(object) == "table" and object.ClassName == "zTable" then
-		self.Removing:Fire(position, object.ref)
-	else
+	--if typeof(object) == "table" and object.ClassName == "zTable" then
+	--	self.Removing:Fire(position, object.ref)
+	--else
 		self.Removing:Fire(position, object)
-	end
+	--end
 
 	return object
 end
@@ -230,6 +233,8 @@ function zTable:Clone(): formedTable
 	local formedTable = zTable.new(self:raw())
 	
 	formedTable.length = self.length
+	
+	formedTable:setPayloadType(self.payloadType)
 	formedTable:setPayloadSize(self.payloadSize)
 	
 	return formedTable
@@ -291,17 +296,35 @@ function zTable:setPayloadSize(payloadSize: number)
 	self:enforcePayloadLength()
 end
 
+-- Set zTable payload type
+function zTable:setPayloadType(payloadType: "In" | "Out")
+	self.payloadType = payloadType
+	
+	self:enforcePayloadLength()
+end
+
 -- Refresh payload length
 function zTable:enforcePayloadLength()
 	local payloadSize = self.payloadSize
+	local payloadType = self.payloadType
 	
 	if not payloadSize then return end
 	
-	self:ReverseSearch(
-		self.Pop,
-		self:len(),
-		payloadSize + 1
-	)
+	if self.payloadType == "In" then
+		self:ForEach(function(z, i, v)
+			if z:len() > payloadSize then
+				z:Pop(1)
+			end
+		end)
+	elseif self.payloadType == "Out" then
+		self:ReverseSearch(
+			self.Pop,
+			self:len(),
+			payloadSize + 1
+		)
+	else
+		error(`"In", "Out", expected as payload type, got {self.payloadType}`)
+	end
 end
 
 export type zTableMalleable = typeof(setmetatable({} :: formedTable, zTable))
